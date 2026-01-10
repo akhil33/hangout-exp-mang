@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4aa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6c5ce7;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Symbol: Interconnected people/community representing "HangOut" -->
+  <g id="icon" transform="translate(20, 20)">
+    <!-- Three interconnected circles representing people gathering -->
+    <circle cx="25" cy="40" r="18" 
+            fill="url(#logoGradient)" 
+            filter="url(#glow)"
+            opacity="0.9"/>
+    <circle cx="60" cy="40" r="18" 
+            fill="url(#logoGradient)" 
+            filter="url(#glow)"
+            opacity="0.9"/>
+    <circle cx="42.5" cy="20" r="18" 
+            fill="url(#logoGradient)" 
+            filter="url(#glow)"
+            opacity="0.9"/>
+    
+    <!-- Connection lines between circles -->
+    <line x1="25" y1="40" x2="60" y2="40" 
+          stroke="url(#logoGradient)" 
+          stroke-width="3" 
+          opacity="0.6"/>
+    <line x1="25" y1="40" x2="42.5" y2="20" 
+          stroke="url(#logoGradient)" 
+          stroke-width="3" 
+          opacity="0.6"/>
+    <line x1="60" y1="40" x2="42.5" y2="20" 
+          stroke="url(#logoGradient)" 
+          stroke-width="3" 
+          opacity="0.6"/>
+    
+    <!-- Person silhouettes inside circles -->
+    <circle cx="25" cy="35" r="6" fill="#0a0a0f" opacity="0.3"/>
+    <circle cx="25" cy="45" r="8" fill="#0a0a0f" opacity="0.3"/>
+    
+    <circle cx="60" cy="35" r="6" fill="#0a0a0f" opacity="0.3"/>
+    <circle cx="60" cy="45" r="8" fill="#0a0a0f" opacity="0.3"/>
+    
+    <circle cx="42.5" cy="15" r="6" fill="#0a0a0f" opacity="0.3"/>
+    <circle cx="42.5" cy="25" r="8" fill="#0a0a0f" opacity="0.3"/>
+  </g>
+  
+  <!-- Text: "HangOut" -->
+  <text x="110" y="75" 
+        font-family="'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" 
+        font-size="48" 
+        font-weight="700" 
+        fill="url(#logoGradient)"
+        letter-spacing="-0.02em">
+    HangOut
+  </text>
+</svg>
