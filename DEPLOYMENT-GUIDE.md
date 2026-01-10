@@ -43,10 +43,11 @@ You'll get: icon-72.png, icon-96.png, icon-128.png, icon-144.png, icon-152.png, 
 1. Create a GitHub account (if you don't have one)
 2. Create a new repository: "expenseflow-pwa"
 3. Upload all your files:
-   - index.html
+   - index.html (renamed from expense-management-pwa.html)
    - manifest.json
    - sw.js
-   - All icon-*.png files
+   - vercel.json (optional but recommended - included in project)
+   - All icon-*.png files (if you have them)
 
 4. Go to https://vercel.com
 5. Sign up with GitHub
@@ -55,6 +56,46 @@ You'll get: icon-72.png, icon-96.png, icon-128.png, icon-144.png, icon-152.png, 
 8. Click "Deploy"
 
 ✅ Done! Your app is live at: `https://expenseflow-pwa.vercel.app`
+
+### Step 4: Troubleshooting Vercel Deployment
+
+**Common Errors and Fixes:**
+
+1. **Error: "Build Failed" or "No Output Directory"**
+   - ✅ A `vercel.json` file is already included in your project
+   - If you still get this error, make sure `vercel.json` is in your GitHub repository root
+   - In Vercel project settings → General → Framework Preset: Select "Other"
+
+2. **Error: "404 Not Found" after deployment**
+   - Make sure `expense-management-pwa.html` is renamed to `index.html`
+   - Check that all files are in the root directory (not in subfolders)
+   - Verify the service worker path in `index.html` is correct: `navigator.serviceWorker.register('/sw.js')`
+
+3. **Error: "Missing icon files"**
+   - The `manifest.json` references icon files that must exist
+   - Create icons using: https://www.pwabuilder.com/imageGenerator
+   - Or temporarily comment out icon entries in `manifest.json` to test deployment
+   - Place all `icon-*.png` files in the root directory
+
+4. **Error: "Service Worker registration failed"**
+   - Service workers only work on HTTPS (Vercel provides this automatically)
+   - Make sure `sw.js` is in the root directory
+   - Check browser console for specific errors
+
+5. **Error: "Module not found" or build errors**
+   - This is a static HTML file, no build needed
+   - In Vercel project settings, set:
+     - Framework Preset: "Other"
+     - Build Command: (leave empty)
+     - Output Directory: (leave empty)
+     - Install Command: (leave empty)
+
+**Quick Fix Checklist:**
+- [ ] `index.html` exists (renamed from `expense-management-pwa.html`)
+- [ ] `manifest.json` is in root directory
+- [ ] `sw.js` is in root directory
+- [ ] All icon files referenced in `manifest.json` exist
+- [ ] `vercel.json` is created (if build errors occur)
 
 **Option B: Using Vercel CLI**
 
