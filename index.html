@@ -28,6 +28,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
         :root {
@@ -1391,6 +1392,12 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
+        // Initialize Supabase
+        const SUPABASE_URL = 'https://ygimmhtjlzdmpiggynxl.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_STSX1sCANMQpf6zzglnRiQ_er6WqEbu';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         // Sample expense data
         const initialExpenses = [
             // January 2026 - Week 1 (Dec 29 - Jan 4)
@@ -1457,7 +1464,87 @@
             { id: 43, name: "Equipment Maintenance", amount: 650, dueDate: "2025-10-12", category: "Equipment", frequency: "quarterly", status: "paid" },
         ];
 
+        const LoginView = ({ onLogin }) => {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                setError('');
+
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
+
+                if (error) {
+                    setError(error.message);
+                } else {
+                    onLogin(data.user);
+                }
+                setIsLoading(false);
+            };
+
+            return (
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    minHeight: '100vh',
+                    padding: '20px'
+                }}>
+                    <div className="widget" style={{ maxWidth: '400px', width: '100%' }}>
+                        <h2 style={{ marginBottom: '24px' }}>Login to ExpenseFlow</h2>
+                        <form onSubmit={handleLogin}>
+                            <div className="form-group">
+                                <label className="form-label">Email</label>
+                                <input 
+                                    type="email"
+                                    className="form-input"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Password</label>
+                                <input 
+                                    type="password"
+                                    className="form-input"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            {error && (
+                                <div style={{ 
+                                    color: 'var(--color-error)', 
+                                    marginBottom: '16px',
+                                    fontSize: '14px'
+                                }}>
+                                    {error}
+                                </div>
+                            )}
+                            <button 
+                                type="submit" 
+                                className="btn btn-primary" 
+                                style={{ width: '100%' }}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? 'Logging in...' : 'Login'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
+            const [user, setUser] = useState(null);
+            const [isLoading, setIsLoading] = useState(true);
             const [currentView, setCurrentView] = useState('dashboard');
             const [userRole, setUserRole] = useState('manager');
             const [timeView, setTimeView] = useState('weekly');
@@ -1465,6 +1552,22 @@
             const [expandedWidgets, setExpandedWidgets] = useState({});
             const [showInstallPrompt, setShowInstallPrompt] = useState(false);
             const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+            // Check if user is logged in and listen for auth changes
+            useEffect(() => {
+                // Check if user is logged in
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    setUser(session?.user ?? null);
+                    setIsLoading(false);
+                });
+
+                // Listen for auth changes
+                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+                    setUser(session?.user ?? null);
+                });
+
+                return () => subscription.unsubscribe();
+            }, []);
 
             useEffect(() => {
                 if (userRole === 'staff' && currentView === 'analytics') {
@@ -1534,6 +1637,24 @@
             const thisWeekTotal = thisWeekExpenses.reduce((sum, e) => sum + e.amount, 0);
             const nextWeekTotal = nextWeekExpenses.reduce((sum, e) => sum + e.amount, 0);
             const pendingApprovals = expenses.filter(e => e.status === 'pending').length;
+
+            if (isLoading) {
+                return (
+                    <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center', 
+                        minHeight: '100vh',
+                        color: 'var(--color-text-primary)'
+                    }}>
+                        Loading...
+                    </div>
+                );
+            }
+
+            if (!user) {
+                return <LoginView onLogin={setUser} />;
+            }
 
             return (
                 <div className="app-container">

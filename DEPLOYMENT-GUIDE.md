@@ -108,7 +108,7 @@ vercel
 2. Sign up (free)
 3. Click "New Project"
 4. Name: "ExpenseFlow"
-5. Database Password: (create strong password - SAVE THIS!)
+5. Database Password: (create strong password - SAVE THIS!) 5gNj%E5?+Cw55Je
 6. Region: Choose closest to you
 7. Click "Create project" (takes 2 minutes)
 
@@ -117,8 +117,8 @@ vercel
 Once project is ready:
 1. Go to Settings → API
 2. Copy:
-   - `Project URL` (looks like: https://xxxxx.supabase.co)
-   - `anon public` key (long string)
+   - `Project URL` (looks like: https://xxxxx.supabase.co): https://ygimmhtjlzdmpiggynxl.supabase.co
+   - `anon public` key (long string): sb_publishable_STSX1sCANMQpf6zzglnRiQ_er6WqEbu
 
 ### Step 3: Create Database Tables
 
@@ -210,8 +210,8 @@ Add this at the start of your `<script type="text/babel">` section:
 
 ```javascript
 // Initialize Supabase
-const SUPABASE_URL = 'YOUR_PROJECT_URL_HERE';
-const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE';
+const SUPABASE_URL = 'https://ygimmhtjlzdmpiggynxl.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_STSX1sCANMQpf6zzglnRiQ_er6WqEbu';
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 ```
