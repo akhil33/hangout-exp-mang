@@ -1678,23 +1678,32 @@
             };
 
             const addExpense = async (newExpense) => {
-                const { error } = await supabase
-                    .from('expenses')
-                    .insert([{
-                        name: newExpense.name,
-                        amount: newExpense.amount,
-                        category: newExpense.category,
-                        frequency: newExpense.frequency,
-                        due_date: newExpense.dueDate,
-                        status: 'pending'
-                    }]);
+                try {
+                    const { data, error } = await supabase
+                        .from('expenses')
+                        .insert([{
+                            name: newExpense.name,
+                            amount: newExpense.amount,
+                            category: newExpense.category,
+                            frequency: newExpense.frequency,
+                            due_date: newExpense.dueDate,
+                            status: 'pending'
+                        }])
+                        .select();
 
-                if (error) {
-                    console.error('Error adding expense:', error);
-                } else {
+                    if (error) {
+                        console.error('Error adding expense:', error);
+                        alert(`Failed to add expense: ${error.message}`);
+                        return;
+                    }
+
+                    console.log('Expense added successfully:', data);
                     // Refresh expenses
-                    fetchExpenses();
+                    await fetchExpenses();
                     setShowAddExpenseModal(false);
+                } catch (err) {
+                    console.error('Unexpected error adding expense:', err);
+                    alert('An unexpected error occurred. Please try again.');
                 }
             };
 
@@ -2290,13 +2299,24 @@
                 frequency: 'weekly',
                 dueDate: ''
             });
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            const [error, setError] = useState('');
 
-            const handleSubmit = (e) => {
+            const handleSubmit = async (e) => {
                 e.preventDefault();
-                onSubmit({
-                    ...formData,
-                    amount: parseFloat(formData.amount)
-                });
+                setError('');
+                setIsSubmitting(true);
+
+                try {
+                    await onSubmit({
+                        ...formData,
+                        amount: parseFloat(formData.amount)
+                    });
+                } catch (err) {
+                    setError(err.message || 'Failed to add expense');
+                } finally {
+                    setIsSubmitting(false);
+                }
             };
 
             return (
@@ -2319,6 +2339,7 @@
                                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                                     required
                                     placeholder="e.g., Liquor Supplier - ABC Distributors"
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
@@ -2333,6 +2354,7 @@
                                     placeholder="0.00"
                                     step="0.01"
                                     min="0"
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
@@ -2342,6 +2364,7 @@
                                     className="form-select"
                                     value={formData.category}
                                     onChange={(e) => setFormData({...formData, category: e.target.value})}
+                                    disabled={isSubmitting}
                                 >
                                     <option>Inventory</option>
                                     <option>Utilities</option>
@@ -2360,6 +2383,7 @@
                                     className="form-select"
                                     value={formData.frequency}
                                     onChange={(e) => setFormData({...formData, frequency: e.target.value})}
+                                    disabled={isSubmitting}
                                 >
                                     <option value="weekly">Weekly</option>
                                     <option value="monthly">Monthly</option>
@@ -2377,15 +2401,41 @@
                                     value={formData.dueDate}
                                     onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
                                     required
+                                    disabled={isSubmitting}
                                 />
                             </div>
 
+                            {error && (
+                                <div style={{
+                                    color: 'var(--color-error)',
+                                    marginBottom: '16px',
+                                    fontSize: '14px',
+                                    padding: '12px',
+                                    background: 'rgba(255, 107, 157, 0.1)',
+                                    border: '1px solid var(--color-error)',
+                                    borderRadius: 'var(--radius-md)'
+                                }}>
+                                    {error}
+                                </div>
+                            )}
+
                             <div style={{ display: 'flex', gap: '16px', marginTop: '32px' }}>
-                                <button type="button" className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={onClose}
+                                    style={{ flex: 1 }}
+                                    disabled={isSubmitting}
+                                >
                                     Cancel
                                 </button>
-                                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
-                                    Add Expense
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    style={{ flex: 1 }}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Adding...' : 'Add Expense'}
                                 </button>
                             </div>
                         </form>
