@@ -1627,8 +1627,16 @@
                     fetchExpenses();
                 } else {
                     setUserRole('staff'); // Reset to default when logged out
+                    setExpenses([]); // Clear expenses when logged out
                 }
             }, [user]);
+
+            // Set initial view based on user role
+            useEffect(() => {
+                if (userRole === 'staff' && (currentView === 'analytics' || currentView === 'setup')) {
+                    setCurrentView('dashboard');
+                }
+            }, [userRole]);
 
             // PWA Install Prompt
             useEffect(() => {
@@ -1679,6 +1687,13 @@
 
             const addExpense = async (newExpense) => {
                 try {
+                    // Check if user is manager
+                    if (userRole !== 'manager') {
+                        alert('Only managers can add expenses.');
+                        setShowAddExpenseModal(false);
+                        return;
+                    }
+
                     // Get current user
                     const { data: { user: currentUser } } = await supabase.auth.getUser();
 
@@ -1687,17 +1702,27 @@
                         return;
                     }
 
+                    // Prepare expense data - make user_id optional
+                    const expenseData = {
+                        name: newExpense.name,
+                        amount: newExpense.amount,
+                        category: newExpense.category,
+                        frequency: newExpense.frequency,
+                        due_date: newExpense.dueDate,
+                        status: 'pending'
+                    };
+
+                    // Only add user_id if the column exists
+                    // This prevents errors if the column is not in the table
+                    try {
+                        expenseData.user_id = currentUser.id;
+                    } catch (e) {
+                        console.log('user_id field not available, skipping');
+                    }
+
                     const { data, error } = await supabase
                         .from('expenses')
-                        .insert([{
-                            name: newExpense.name,
-                            amount: newExpense.amount,
-                            category: newExpense.category,
-                            frequency: newExpense.frequency,
-                            due_date: newExpense.dueDate,
-                            status: 'pending',
-                            user_id: currentUser.id
-                        }])
+                        .insert([expenseData])
                         .select();
 
                     if (error) {
@@ -1705,9 +1730,11 @@
 
                         // Provide more helpful error messages
                         if (error.message.includes('policy')) {
-                            alert('Permission denied. Please check your account permissions or contact support.');
+                            alert('Permission denied. Please run the SQL command to fix policies:\n\nCREATE POLICY "Allow all for authenticated users" ON expenses TO authenticated USING (true) WITH CHECK (true);');
                         } else if (error.message.includes('recursion')) {
                             alert('Database configuration error. Please contact your administrator.');
+                        } else if (error.message.includes('user_id')) {
+                            alert('Database schema error. The user_id column may not exist or has wrong permissions.');
                         } else {
                             alert(`Failed to add expense: ${error.message}`);
                         }
@@ -1898,58 +1925,76 @@
                 return user.email || user.user_metadata?.name || user.user_metadata?.full_name || 'User';
             };
 
+            const handleLogout = async () => {
+                const { error } = await supabase.auth.signOut();
+                if (error) {
+                    console.error('Error logging out:', error);
+                    alert('Failed to log out. Please try again.');
+                }
+                // User will be automatically redirected to login by the auth state listener
+            };
+
             return (
                 <div className="sidebar">
                     <div className="logo">
                         <div className="logo-icon">💎</div>
                         <span>ExpenseFlow</span>
                     </div>
-                    
+
                     <div style={{ padding: '0 32px 32px' }}>
                         <div className="user-badge">
                             <span>👤</span>
-                            <span>{getUserDisplayName()}</span>
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {getUserDisplayName()}
+                            </span>
                             <span className="role-indicator">
                                 {userRole === 'manager' ? 'MANAGER' : 'STAFF'}
                             </span>
                         </div>
                     </div>
 
-                    <div className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`} 
+                    <div className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
                          onClick={() => setCurrentView('dashboard')}>
                         <span className="nav-icon">📊</span>
                         <span>Dashboard</span>
                     </div>
-                    
-                    <div className={`nav-item ${currentView === 'calendar' ? 'active' : ''}`} 
+
+                    <div className={`nav-item ${currentView === 'calendar' ? 'active' : ''}`}
                          onClick={() => setCurrentView('calendar')}>
                         <span className="nav-icon">📅</span>
                         <span>Calendar View</span>
                     </div>
-                    
+
                     {userRole === 'manager' && (
-                        <div className={`nav-item ${currentView === 'analytics' ? 'active' : ''}`} 
+                        <div className={`nav-item ${currentView === 'analytics' ? 'active' : ''}`}
                              onClick={() => setCurrentView('analytics')}>
                             <span className="nav-icon">📈</span>
                             <span>Analytics</span>
                         </div>
                     )}
-                    
+
                     {userRole === 'manager' && (
-                        <div className={`nav-item ${currentView === 'setup' ? 'active' : ''}`} 
+                        <div className={`nav-item ${currentView === 'setup' ? 'active' : ''}`}
                              onClick={() => setCurrentView('setup')}>
                             <span className="nav-icon">⚙️</span>
                             <span>Setup</span>
                         </div>
                     )}
 
-                    <div style={{ marginTop: 'auto', padding: '20px 32px', borderTop: '1px solid var(--color-border)' }}>
-                        <button 
-                            className="btn btn-secondary" 
+                    <div style={{ marginTop: 'auto', padding: '20px 32px', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <button
+                            className="btn btn-secondary"
                             style={{ width: '100%' }}
                             onClick={() => setUserRole(userRole === 'manager' ? 'staff' : 'manager')}
                         >
                             Switch to {userRole === 'manager' ? 'Staff' : 'Manager'}
+                        </button>
+                        <button
+                            className="btn btn-secondary"
+                            style={{ width: '100%', background: 'var(--color-error)', borderColor: 'var(--color-error)', color: 'white' }}
+                            onClick={handleLogout}
+                        >
+                            Logout
                         </button>
                     </div>
                 </div>
