@@ -1576,6 +1576,24 @@
                 }
             }, [userRole, currentView]);
 
+            const fetchUserRole = async () => {
+                if (!user) return;
+                
+                const { data, error } = await supabase
+                    .from('user_roles')
+                    .select('role')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (error) {
+                    console.error('Error fetching user role:', error);
+                    // Default to staff if role not found
+                    setUserRole('staff');
+                } else {
+                    setUserRole(data?.role || 'staff');
+                }
+            };
+
             const fetchExpenses = async () => {
                 setIsLoadingExpenses(true);
                 const { data, error } = await supabase
@@ -1601,10 +1619,13 @@
                 setIsLoadingExpenses(false);
             };
 
-            // Fetch expenses from Supabase when user is logged in
+            // Fetch user role and expenses from Supabase when user is logged in
             useEffect(() => {
                 if (user) {
+                    fetchUserRole();
                     fetchExpenses();
+                } else {
+                    setUserRole('staff'); // Reset to default when logged out
                 }
             }, [user]);
 
@@ -1705,6 +1726,7 @@
                         setCurrentView={setCurrentView}
                         userRole={userRole}
                         setUserRole={setUserRole}
+                        user={user}
                     />
 
                     {/* Mobile Header */}
@@ -1812,7 +1834,14 @@
             );
         };
 
-        const Sidebar = ({ currentView, setCurrentView, userRole, setUserRole }) => {
+        const Sidebar = ({ currentView, setCurrentView, userRole, setUserRole, user }) => {
+            // Get user display name (email or name if available)
+            const getUserDisplayName = () => {
+                if (!user) return 'Guest';
+                // Use email as display name, or user_metadata.name if available
+                return user.email || user.user_metadata?.name || user.user_metadata?.full_name || 'User';
+            };
+
             return (
                 <div className="sidebar">
                     <div className="logo">
@@ -1823,7 +1852,7 @@
                     <div style={{ padding: '0 32px 32px' }}>
                         <div className="user-badge">
                             <span>👤</span>
-                            <span>John Doe</span>
+                            <span>{getUserDisplayName()}</span>
                             <span className="role-indicator">
                                 {userRole === 'manager' ? 'MANAGER' : 'STAFF'}
                             </span>
