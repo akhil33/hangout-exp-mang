@@ -1,9 +1,9 @@
 // Service Worker for ExpenseFlow PWA
-// Version 1.0.0
+// Version 2.0.0 - Fixed API caching issue
 
-const CACHE_NAME = 'expenseflow-v1';
-const STATIC_CACHE_NAME = 'expenseflow-static-v1';
-const DYNAMIC_CACHE_NAME = 'expenseflow-dynamic-v1';
+const CACHE_NAME = 'expenseflow-v2';
+const STATIC_CACHE_NAME = 'expenseflow-static-v2';
+const DYNAMIC_CACHE_NAME = 'expenseflow-dynamic-v2';
 
 // Files to cache immediately
 const STATIC_ASSETS = [
@@ -71,7 +71,7 @@ self.addEventListener('activate', (event) => {
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  
+
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
@@ -79,6 +79,17 @@ self.addEventListener('fetch', (event) => {
 
   // Skip chrome extensions and other non-http requests
   if (!request.url.startsWith('http')) {
+    return;
+  }
+
+  // IMPORTANT: Never cache API requests (Supabase or any other API)
+  // This prevents stale data from being served
+  if (request.url.includes('/rest/v1/') ||
+      request.url.includes('/auth/v1/') ||
+      request.url.includes('supabase.co')) {
+    console.log('[ServiceWorker] Bypassing cache for API request:', request.url);
+    // Always fetch fresh data from network for API calls
+    event.respondWith(fetch(request));
     return;
   }
 
