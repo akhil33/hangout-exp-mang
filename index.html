@@ -1604,10 +1604,11 @@
             const fetchExpenses = async () => {
                 setIsLoadingExpenses(true);
                 console.log('🔍 Fetching expenses from Supabase...');
+                console.log('🔍 Current user:', user?.id);
 
-                const { data, error } = await supabase
+                const { data, error, count } = await supabase
                     .from('expenses')
-                    .select('*')
+                    .select('*', { count: 'exact' })
                     .order('due_date', { ascending: false });
 
                 if (error) {
@@ -1620,7 +1621,13 @@
                     });
                 } else {
                     console.log(`✅ Successfully fetched ${data?.length || 0} expenses from database`);
+                    console.log(`📊 Total count from database: ${count}`);
                     console.log('Raw data from database:', data);
+
+                    if (count !== data?.length) {
+                        console.warn(`⚠️ WARNING: Count mismatch! Expected ${count} but got ${data?.length}`);
+                        console.warn('⚠️ This might indicate RLS policy filtering some rows');
+                    }
 
                     // Map database fields to app format (due_date -> dueDate)
                     const mappedExpenses = data.map(exp => ({
@@ -1630,10 +1637,12 @@
                         dueDate: exp.due_date,
                         category: exp.category,
                         frequency: exp.frequency,
-                        status: exp.status
+                        status: exp.status || 'pending',
+                        user_id: exp.user_id
                     }));
 
                     console.log('📊 Mapped expenses:', mappedExpenses);
+                    console.log('📊 Expense IDs:', mappedExpenses.map(e => e.id));
                     setExpenses(mappedExpenses);
                 }
                 setIsLoadingExpenses(false);
