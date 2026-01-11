@@ -1068,6 +1068,12 @@
             animation: pulse 2s ease-in-out infinite;
         }
 
+        /* Spin animation for loading indicators */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         /* Install prompt */
         .install-prompt {
             position: fixed;
@@ -1638,6 +1644,31 @@
                 if (user) {
                     fetchUserRole();
                     fetchExpenses();
+
+                    // Set up real-time subscription for expenses
+                    console.log('📡 Setting up real-time subscription for expenses');
+                    const channel = supabase
+                        .channel('expenses-changes')
+                        .on(
+                            'postgres_changes',
+                            {
+                                event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+                                schema: 'public',
+                                table: 'expenses'
+                            },
+                            (payload) => {
+                                console.log('📡 Real-time update received:', payload);
+                                // Refresh expenses when any change occurs
+                                fetchExpenses();
+                            }
+                        )
+                        .subscribe();
+
+                    // Cleanup subscription on unmount
+                    return () => {
+                        console.log('📡 Cleaning up real-time subscription');
+                        supabase.removeChannel(channel);
+                    };
                 } else {
                     setUserRole('staff'); // Reset to default when logged out
                     setExpenses([]); // Clear expenses when logged out
@@ -1685,16 +1716,19 @@
             };
 
             const approveExpense = async (id) => {
+                console.log('✅ Approving expense:', id);
                 const { error } = await supabase
                     .from('expenses')
                     .update({ status: 'approved' })
                     .eq('id', id);
 
                 if (error) {
-                    console.error('Error approving expense:', error);
+                    console.error('❌ Error approving expense:', error);
+                    alert(`Failed to approve expense: ${error.message}`);
                 } else {
-                    // Refresh expenses
-                    fetchExpenses();
+                    console.log('✅ Expense approved successfully');
+                    // Refresh expenses to show updated status
+                    await fetchExpenses();
                 }
             };
 
@@ -1754,10 +1788,16 @@
                         return;
                     }
 
-                    console.log('Expense added successfully:', data);
-                    // Refresh expenses
-                    await fetchExpenses();
+                    console.log('✅ Expense added successfully:', data);
+
+                    // Show success message
+                    alert(`Expense "${newExpense.name}" added successfully!`);
+
+                    // Close modal first for better UX
                     setShowAddExpenseModal(false);
+
+                    // Refresh expenses to show the new expense
+                    await fetchExpenses();
                 } catch (err) {
                     console.error('Unexpected error adding expense:', err);
                     alert('An unexpected error occurred. Please try again.');
@@ -1884,6 +1924,35 @@
 
                     {/* Main Content */}
                     <div className="main-content">
+                        {isLoadingExpenses && (
+                            <div style={{
+                                position: 'fixed',
+                                top: 'calc(var(--mobile-header-height) + env(safe-area-inset-top) + 16px)',
+                                right: '24px',
+                                background: 'var(--color-surface-elevated)',
+                                border: '1px solid var(--color-primary)',
+                                borderRadius: 'var(--radius-md)',
+                                padding: '12px 20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                zIndex: 100,
+                                boxShadow: 'var(--shadow-lg)',
+                                animation: 'slideDown 0.3s ease-out'
+                            }}>
+                                <div style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    border: '2px solid var(--color-primary)',
+                                    borderTopColor: 'transparent',
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite'
+                                }}></div>
+                                <span style={{ color: 'var(--color-text-primary)', fontSize: '14px', fontWeight: 600 }}>
+                                    Refreshing expenses...
+                                </span>
+                            </div>
+                        )}
                         {currentView === 'dashboard' && (
                             <Dashboard
                                 timeView={timeView}
