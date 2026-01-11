@@ -2215,7 +2215,8 @@
         };
 
         const CalendarView = ({ expenses }) => {
-            const [currentMonth] = useState(new Date('2026-01-01'));
+            // Create date using year, month, day to avoid timezone issues
+            const [currentMonth] = useState(new Date(2026, 0, 1)); // January is month 0
             const [selectedDay, setSelectedDay] = useState(null);
 
             const getDaysInMonth = () => {
@@ -2225,7 +2226,7 @@
                 const lastDay = new Date(year, month + 1, 0);
                 const days = [];
 
-                console.log('📅 Calendar: Building calendar for', year, month + 1);
+                console.log('📅 Calendar: Building calendar for', `${year}-${String(month + 1).padStart(2, '0')}`);
                 console.log('📅 Calendar: Total expenses to check:', expenses.length);
                 console.log('📅 Calendar: Expense dates:', expenses.map(e => ({ name: e.name, dueDate: e.dueDate })));
 
