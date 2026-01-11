@@ -1557,6 +1557,7 @@
             const [expenses, setExpenses] = useState([]);
             const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
             const [expandedWidgets, setExpandedWidgets] = useState({});
+            const fetchTimeoutRef = React.useRef(null);
             const [showInstallPrompt, setShowInstallPrompt] = useState(false);
             const [deferredPrompt, setDeferredPrompt] = useState(null);
             const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
@@ -1601,15 +1602,23 @@
                 }
             };
 
-            const fetchExpenses = async () => {
-                setIsLoadingExpenses(true);
-                console.log('🔍 Fetching expenses from Supabase...');
-                console.log('🔍 Current user:', user?.id);
+            const fetchExpenses = async (delayMs = 0) => {
+                // Clear any pending fetch
+                if (fetchTimeoutRef.current) {
+                    clearTimeout(fetchTimeoutRef.current);
+                }
 
-                const { data, error, count } = await supabase
-                    .from('expenses')
-                    .select('*', { count: 'exact' })
-                    .order('due_date', { ascending: false });
+                // Debounce: wait a bit before fetching to avoid race conditions
+                return new Promise((resolve) => {
+                    fetchTimeoutRef.current = setTimeout(async () => {
+                        setIsLoadingExpenses(true);
+                        console.log('🔍 Fetching expenses from Supabase...');
+                        console.log('🔍 Current user:', user?.id);
+
+                        const { data, error, count } = await supabase
+                            .from('expenses')
+                            .select('*', { count: 'exact' })
+                            .order('due_date', { ascending: false });
 
                 if (error) {
                     console.error('❌ Error fetching expenses:', error);
@@ -1661,7 +1670,10 @@
                     console.log('📊 Expense IDs:', mappedExpenses.map(e => e.id));
                     setExpenses(mappedExpenses);
                 }
-                setIsLoadingExpenses(false);
+                        setIsLoadingExpenses(false);
+                        resolve();
+                    }, delayMs);
+                });
             };
 
             // Fetch user role and expenses from Supabase when user is logged in
@@ -1683,8 +1695,9 @@
                             },
                             (payload) => {
                                 console.log('📡 Real-time update received:', payload);
-                                // Refresh expenses when any change occurs
-                                fetchExpenses();
+                                // Refresh expenses with a delay to allow database replication
+                                // This prevents fetching before the transaction is fully committed
+                                fetchExpenses(300);
                             }
                         )
                         .subscribe();
@@ -1821,8 +1834,10 @@
                     // Close modal first for better UX
                     setShowAddExpenseModal(false);
 
-                    // Refresh expenses to show the new expense
-                    await fetchExpenses();
+                    // Refresh expenses with a delay to allow database to commit
+                    // This prevents race condition with real-time subscription
+                    console.log('⏱️ Waiting 500ms for database to commit...');
+                    await fetchExpenses(500);
                 } catch (err) {
                     console.error('Unexpected error adding expense:', err);
                     alert('An unexpected error occurred. Please try again.');
