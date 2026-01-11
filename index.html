@@ -1548,7 +1548,8 @@
             const [currentView, setCurrentView] = useState('dashboard');
             const [userRole, setUserRole] = useState('manager');
             const [timeView, setTimeView] = useState('weekly');
-            const [expenses, setExpenses] = useState(initialExpenses);
+            const [expenses, setExpenses] = useState([]);
+            const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
             const [expandedWidgets, setExpandedWidgets] = useState({});
             const [showInstallPrompt, setShowInstallPrompt] = useState(false);
             const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -1574,6 +1575,38 @@
                     setCurrentView('dashboard');
                 }
             }, [userRole, currentView]);
+
+            const fetchExpenses = async () => {
+                setIsLoadingExpenses(true);
+                const { data, error } = await supabase
+                    .from('expenses')
+                    .select('*')
+                    .order('due_date', { ascending: false });
+
+                if (error) {
+                    console.error('Error fetching expenses:', error);
+                } else {
+                    // Map database fields to app format (due_date -> dueDate)
+                    const mappedExpenses = data.map(exp => ({
+                        id: exp.id,
+                        name: exp.name,
+                        amount: parseFloat(exp.amount),
+                        dueDate: exp.due_date,
+                        category: exp.category,
+                        frequency: exp.frequency,
+                        status: exp.status
+                    }));
+                    setExpenses(mappedExpenses);
+                }
+                setIsLoadingExpenses(false);
+            };
+
+            // Fetch expenses from Supabase when user is logged in
+            useEffect(() => {
+                if (user) {
+                    fetchExpenses();
+                }
+            }, [user]);
 
             // PWA Install Prompt
             useEffect(() => {
@@ -1608,10 +1641,18 @@
                 }));
             };
 
-            const approveExpense = (id) => {
-                setExpenses(prev => prev.map(exp => 
-                    exp.id === id ? { ...exp, status: 'approved' } : exp
-                ));
+            const approveExpense = async (id) => {
+                const { error } = await supabase
+                    .from('expenses')
+                    .update({ status: 'approved' })
+                    .eq('id', id);
+
+                if (error) {
+                    console.error('Error approving expense:', error);
+                } else {
+                    // Refresh expenses
+                    fetchExpenses();
+                }
             };
 
             const getWeekExpenses = (weekOffset) => {
