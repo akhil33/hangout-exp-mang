@@ -1553,6 +1553,7 @@
             const [expandedWidgets, setExpandedWidgets] = useState({});
             const [showInstallPrompt, setShowInstallPrompt] = useState(false);
             const [deferredPrompt, setDeferredPrompt] = useState(null);
+            const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
 
             // Check if user is logged in and listen for auth changes
             useEffect(() => {
@@ -1676,6 +1677,27 @@
                 }
             };
 
+            const addExpense = async (newExpense) => {
+                const { error } = await supabase
+                    .from('expenses')
+                    .insert([{
+                        name: newExpense.name,
+                        amount: newExpense.amount,
+                        category: newExpense.category,
+                        frequency: newExpense.frequency,
+                        due_date: newExpense.dueDate,
+                        status: 'pending'
+                    }]);
+
+                if (error) {
+                    console.error('Error adding expense:', error);
+                } else {
+                    // Refresh expenses
+                    fetchExpenses();
+                    setShowAddExpenseModal(false);
+                }
+            };
+
             const getWeekExpenses = (weekOffset) => {
                 const today = new Date('2026-01-10');
                 const weekStart = new Date(today);
@@ -1748,7 +1770,7 @@
                     {/* Main Content */}
                     <div className="main-content">
                         {currentView === 'dashboard' && (
-                            <Dashboard 
+                            <Dashboard
                                 timeView={timeView}
                                 setTimeView={setTimeView}
                                 userRole={userRole}
@@ -1764,6 +1786,7 @@
                                 thisWeekTotal={thisWeekTotal}
                                 nextWeekTotal={nextWeekTotal}
                                 pendingApprovals={pendingApprovals}
+                                onAddExpense={() => setShowAddExpenseModal(true)}
                             />
                         )}
                         {currentView === 'calendar' && (
@@ -1776,6 +1799,13 @@
                             <SetupView expenses={expenses} setExpenses={setExpenses} />
                         )}
                     </div>
+
+                    {showAddExpenseModal && (
+                        <AddExpenseModal
+                            onClose={() => setShowAddExpenseModal(false)}
+                            onSubmit={addExpense}
+                        />
+                    )}
 
                     {/* Mobile Bottom Navigation */}
                     <div className="mobile-bottom-nav">
@@ -1904,12 +1934,12 @@
         // Due to character limit, I'm referencing the previous implementation
         // Copy all the component code from the previous version here
 
-        const Dashboard = ({ 
-            timeView, setTimeView, userRole, expenses, 
+        const Dashboard = ({
+            timeView, setTimeView, userRole, expenses,
             expandedWidgets, toggleWidget, approveExpense,
             lastWeekExpenses, thisWeekExpenses, nextWeekExpenses,
             lastWeekTotal, lastWeekPaidTotal, thisWeekTotal, nextWeekTotal,
-            pendingApprovals
+            pendingApprovals, onAddExpense
         }) => {
             return (
                 <>
@@ -1920,7 +1950,7 @@
                         </div>
                         <div className="header-actions">
                             {userRole === 'manager' && (
-                                <button className="btn btn-primary">
+                                <button className="btn btn-primary" onClick={onAddExpense}>
                                     <span>+</span>
                                     <span>Add Expense</span>
                                 </button>
@@ -2247,6 +2277,118 @@
                     <div className="header-title">
                         <h1>Expense Setup</h1>
                         <p>Coming soon with full setup interface</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const AddExpenseModal = ({ onClose, onSubmit }) => {
+            const [formData, setFormData] = useState({
+                name: '',
+                amount: '',
+                category: 'Inventory',
+                frequency: 'weekly',
+                dueDate: ''
+            });
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSubmit({
+                    ...formData,
+                    amount: parseFloat(formData.amount)
+                });
+            };
+
+            return (
+                <div className="modal-overlay" onClick={onClose}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title">Add New Expense</div>
+                            <button className="modal-close" onClick={onClose}>
+                                ×
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label className="form-label">Expense Name</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    required
+                                    placeholder="e.g., Liquor Supplier - ABC Distributors"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Amount ($)</label>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    value={formData.amount}
+                                    onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                                    required
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    min="0"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Category</label>
+                                <select
+                                    className="form-select"
+                                    value={formData.category}
+                                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                                >
+                                    <option>Inventory</option>
+                                    <option>Utilities</option>
+                                    <option>Payroll</option>
+                                    <option>Rent</option>
+                                    <option>Insurance</option>
+                                    <option>Equipment</option>
+                                    <option>Marketing</option>
+                                    <option>Services</option>
+                                </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Frequency</label>
+                                <select
+                                    className="form-select"
+                                    value={formData.frequency}
+                                    onChange={(e) => setFormData({...formData, frequency: e.target.value})}
+                                >
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="quarterly">Quarterly</option>
+                                    <option value="yearly">Yearly</option>
+                                    <option value="one-time">One-time</option>
+                                </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Due Date</label>
+                                <input
+                                    type="date"
+                                    className="form-input"
+                                    value={formData.dueDate}
+                                    onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+                                    required
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '32px' }}>
+                                <button type="button" className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                                    Add Expense
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             );
