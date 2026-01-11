@@ -1764,8 +1764,21 @@
                 }
             };
 
+            // Helper functions to get expenses for different time periods
+            const getDayExpenses = (dayOffset) => {
+                const today = new Date(2026, 0, 10); // Jan 10, 2026
+                const targetDate = new Date(today);
+                targetDate.setDate(today.getDate() + dayOffset);
+                const targetDateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+
+                return expenses.filter(exp => {
+                    const expenseDate = exp.dueDate.split('T')[0];
+                    return expenseDate === targetDateStr;
+                });
+            };
+
             const getWeekExpenses = (weekOffset) => {
-                const today = new Date('2026-01-10');
+                const today = new Date(2026, 0, 10); // Jan 10, 2026
                 const weekStart = new Date(today);
                 weekStart.setDate(today.getDate() - today.getDay() + (weekOffset * 7));
                 const weekEnd = new Date(weekStart);
@@ -1777,15 +1790,51 @@
                 });
             };
 
-            const lastWeekExpenses = getWeekExpenses(-1);
-            const thisWeekExpenses = getWeekExpenses(0);
-            const nextWeekExpenses = getWeekExpenses(1);
+            const getMonthExpenses = (monthOffset) => {
+                const today = new Date(2026, 0, 10); // Jan 10, 2026
+                const targetMonth = new Date(today);
+                targetMonth.setMonth(today.getMonth() + monthOffset);
+                const year = targetMonth.getFullYear();
+                const month = targetMonth.getMonth();
 
-            const lastWeekPaid = lastWeekExpenses.filter(e => e.status === 'paid');
-            const lastWeekTotal = lastWeekExpenses.reduce((sum, e) => sum + e.amount, 0);
-            const lastWeekPaidTotal = lastWeekPaid.reduce((sum, e) => sum + e.amount, 0);
-            const thisWeekTotal = thisWeekExpenses.reduce((sum, e) => sum + e.amount, 0);
-            const nextWeekTotal = nextWeekExpenses.reduce((sum, e) => sum + e.amount, 0);
+                return expenses.filter(exp => {
+                    const expDate = new Date(exp.dueDate);
+                    return expDate.getFullYear() === year && expDate.getMonth() === month;
+                });
+            };
+
+            // Get expenses based on current view
+            let lastPeriodExpenses, currentPeriodExpenses, nextPeriodExpenses;
+            let lastPeriodLabel, currentPeriodLabel, nextPeriodLabel;
+
+            if (timeView === 'daily') {
+                lastPeriodExpenses = getDayExpenses(-1);
+                currentPeriodExpenses = getDayExpenses(0);
+                nextPeriodExpenses = getDayExpenses(1);
+                lastPeriodLabel = 'Yesterday';
+                currentPeriodLabel = 'Today';
+                nextPeriodLabel = 'Tomorrow';
+            } else if (timeView === 'weekly') {
+                lastPeriodExpenses = getWeekExpenses(-1);
+                currentPeriodExpenses = getWeekExpenses(0);
+                nextPeriodExpenses = getWeekExpenses(1);
+                lastPeriodLabel = 'Last Week';
+                currentPeriodLabel = 'This Week';
+                nextPeriodLabel = 'Next Week';
+            } else { // monthly
+                lastPeriodExpenses = getMonthExpenses(-1);
+                currentPeriodExpenses = getMonthExpenses(0);
+                nextPeriodExpenses = getMonthExpenses(1);
+                lastPeriodLabel = 'Last Month';
+                currentPeriodLabel = 'This Month';
+                nextPeriodLabel = 'Next Month';
+            }
+
+            const lastPeriodPaid = lastPeriodExpenses.filter(e => e.status === 'paid');
+            const lastPeriodTotal = lastPeriodExpenses.reduce((sum, e) => sum + e.amount, 0);
+            const lastPeriodPaidTotal = lastPeriodPaid.reduce((sum, e) => sum + e.amount, 0);
+            const currentPeriodTotal = currentPeriodExpenses.reduce((sum, e) => sum + e.amount, 0);
+            const nextPeriodTotal = nextPeriodExpenses.reduce((sum, e) => sum + e.amount, 0);
             const pendingApprovals = expenses.filter(e => e.status === 'pending').length;
 
             if (isLoading) {
@@ -1844,13 +1893,16 @@
                                 expandedWidgets={expandedWidgets}
                                 toggleWidget={toggleWidget}
                                 approveExpense={approveExpense}
-                                lastWeekExpenses={lastWeekExpenses}
-                                thisWeekExpenses={thisWeekExpenses}
-                                nextWeekExpenses={nextWeekExpenses}
-                                lastWeekTotal={lastWeekTotal}
-                                lastWeekPaidTotal={lastWeekPaidTotal}
-                                thisWeekTotal={thisWeekTotal}
-                                nextWeekTotal={nextWeekTotal}
+                                lastPeriodExpenses={lastPeriodExpenses}
+                                currentPeriodExpenses={currentPeriodExpenses}
+                                nextPeriodExpenses={nextPeriodExpenses}
+                                lastPeriodTotal={lastPeriodTotal}
+                                lastPeriodPaidTotal={lastPeriodPaidTotal}
+                                currentPeriodTotal={currentPeriodTotal}
+                                nextPeriodTotal={nextPeriodTotal}
+                                lastPeriodLabel={lastPeriodLabel}
+                                currentPeriodLabel={currentPeriodLabel}
+                                nextPeriodLabel={nextPeriodLabel}
                                 pendingApprovals={pendingApprovals}
                                 onAddExpense={() => setShowAddExpenseModal(true)}
                             />
@@ -2021,8 +2073,9 @@
         const Dashboard = ({
             timeView, setTimeView, userRole, expenses,
             expandedWidgets, toggleWidget, approveExpense,
-            lastWeekExpenses, thisWeekExpenses, nextWeekExpenses,
-            lastWeekTotal, lastWeekPaidTotal, thisWeekTotal, nextWeekTotal,
+            lastPeriodExpenses, currentPeriodExpenses, nextPeriodExpenses,
+            lastPeriodTotal, lastPeriodPaidTotal, currentPeriodTotal, nextPeriodTotal,
+            lastPeriodLabel, currentPeriodLabel, nextPeriodLabel,
             pendingApprovals, onAddExpense
         }) => {
             return (
@@ -2069,26 +2122,26 @@
                         <>
                             <div className="stats-grid">
                                 <div className="stat-card">
-                                    <div className="stat-label">Last Week Performance</div>
+                                    <div className="stat-label">{lastPeriodLabel} Performance</div>
                                     <div className="stat-value">
-                                        ${lastWeekPaidTotal.toLocaleString()} / ${lastWeekTotal.toLocaleString()}
+                                        ${lastPeriodPaidTotal.toLocaleString()} / ${lastPeriodTotal.toLocaleString()}
                                     </div>
                                     <div className="stat-subtext">
                                         <span>✓</span>
-                                        {lastWeekTotal > 0 ? Math.round((lastWeekPaidTotal / lastWeekTotal) * 100) : 0}% paid on time
+                                        {lastPeriodTotal > 0 ? Math.round((lastPeriodPaidTotal / lastPeriodTotal) * 100) : 0}% paid on time
                                     </div>
                                 </div>
 
                                 <div className="stat-card">
-                                    <div className="stat-label">This Week Total</div>
-                                    <div className="stat-value">${thisWeekTotal.toLocaleString()}</div>
-                                    <div className="stat-subtext">{thisWeekExpenses.length} expenses</div>
+                                    <div className="stat-label">{currentPeriodLabel} Total</div>
+                                    <div className="stat-value">${currentPeriodTotal.toLocaleString()}</div>
+                                    <div className="stat-subtext">{currentPeriodExpenses.length} expenses</div>
                                 </div>
 
                                 <div className="stat-card">
-                                    <div className="stat-label">Next Week Planned</div>
-                                    <div className="stat-value">${nextWeekTotal.toLocaleString()}</div>
-                                    <div className="stat-subtext">{nextWeekExpenses.length} expenses</div>
+                                    <div className="stat-label">{nextPeriodLabel} Planned</div>
+                                    <div className="stat-value">${nextPeriodTotal.toLocaleString()}</div>
+                                    <div className="stat-subtext">{nextPeriodExpenses.length} expenses</div>
                                 </div>
 
                                 <div className="stat-card">
@@ -2102,34 +2155,34 @@
                             </div>
 
                             <div className="widgets-grid">
-                                <ExpenseWidget 
-                                    title="Last Week vs Paid"
-                                    amount={lastWeekPaidTotal}
-                                    subtitle={`${lastWeekExpenses.length} expenses`}
-                                    expenses={lastWeekExpenses}
-                                    expanded={expandedWidgets.lastWeek}
-                                    onToggle={() => toggleWidget('lastWeek')}
+                                <ExpenseWidget
+                                    title={`${lastPeriodLabel} vs Paid`}
+                                    amount={lastPeriodPaidTotal}
+                                    subtitle={`${lastPeriodExpenses.length} expenses`}
+                                    expenses={lastPeriodExpenses}
+                                    expanded={expandedWidgets.lastPeriod}
+                                    onToggle={() => toggleWidget('lastPeriod')}
                                     showApprove={false}
                                 />
 
-                                <ExpenseWidget 
-                                    title="This Week Coming Up"
-                                    amount={thisWeekTotal}
-                                    subtitle={`${thisWeekExpenses.length} expenses`}
-                                    expenses={thisWeekExpenses}
-                                    expanded={expandedWidgets.thisWeek}
-                                    onToggle={() => toggleWidget('thisWeek')}
+                                <ExpenseWidget
+                                    title={`${currentPeriodLabel} Coming Up`}
+                                    amount={currentPeriodTotal}
+                                    subtitle={`${currentPeriodExpenses.length} expenses`}
+                                    expenses={currentPeriodExpenses}
+                                    expanded={expandedWidgets.currentPeriod}
+                                    onToggle={() => toggleWidget('currentPeriod')}
                                     onApprove={approveExpense}
                                     showApprove={true}
                                 />
 
-                                <ExpenseWidget 
-                                    title="Next Week Planned"
-                                    amount={nextWeekTotal}
-                                    subtitle={`${nextWeekExpenses.length} expenses`}
-                                    expenses={nextWeekExpenses}
-                                    expanded={expandedWidgets.nextWeek}
-                                    onToggle={() => toggleWidget('nextWeek')}
+                                <ExpenseWidget
+                                    title={`${nextPeriodLabel} Planned`}
+                                    amount={nextPeriodTotal}
+                                    subtitle={`${nextPeriodExpenses.length} expenses`}
+                                    expenses={nextPeriodExpenses}
+                                    expanded={expandedWidgets.nextPeriod}
+                                    onToggle={() => toggleWidget('nextPeriod')}
                                     onApprove={approveExpense}
                                     showApprove={true}
                                 />
@@ -2137,11 +2190,11 @@
                         </>
                     ) : (
                         <div className="widgets-grid" style={{ gridTemplateColumns: '1fr' }}>
-                            <ExpenseWidget 
-                                title="This Week Coming Up"
-                                amount={thisWeekTotal}
-                                subtitle={`${thisWeekExpenses.length} expenses`}
-                                expenses={thisWeekExpenses}
+                            <ExpenseWidget
+                                title={`${currentPeriodLabel} Coming Up`}
+                                amount={currentPeriodTotal}
+                                subtitle={`${currentPeriodExpenses.length} expenses`}
+                                expenses={currentPeriodExpenses}
                                 expanded={true}
                                 onToggle={() => {}}
                                 showApprove={false}
