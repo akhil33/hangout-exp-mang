@@ -1679,6 +1679,14 @@
 
             const addExpense = async (newExpense) => {
                 try {
+                    // Get current user
+                    const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+                    if (!currentUser) {
+                        alert('You must be logged in to add expenses.');
+                        return;
+                    }
+
                     const { data, error } = await supabase
                         .from('expenses')
                         .insert([{
@@ -1687,13 +1695,22 @@
                             category: newExpense.category,
                             frequency: newExpense.frequency,
                             due_date: newExpense.dueDate,
-                            status: 'pending'
+                            status: 'pending',
+                            user_id: currentUser.id
                         }])
                         .select();
 
                     if (error) {
                         console.error('Error adding expense:', error);
-                        alert(`Failed to add expense: ${error.message}`);
+
+                        // Provide more helpful error messages
+                        if (error.message.includes('policy')) {
+                            alert('Permission denied. Please check your account permissions or contact support.');
+                        } else if (error.message.includes('recursion')) {
+                            alert('Database configuration error. Please contact your administrator.');
+                        } else {
+                            alert(`Failed to add expense: ${error.message}`);
+                        }
                         return;
                     }
 
