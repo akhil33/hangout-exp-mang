@@ -2042,26 +2042,28 @@
                         </div>
                     </div>
 
-                    <div className="view-tabs">
-                        <button 
-                            className={`tab ${timeView === 'daily' ? 'active' : ''}`}
-                            onClick={() => setTimeView('daily')}
-                        >
-                            Daily
-                        </button>
-                        <button 
-                            className={`tab ${timeView === 'weekly' ? 'active' : ''}`}
-                            onClick={() => setTimeView('weekly')}
-                        >
-                            Weekly
-                        </button>
-                        <button 
-                            className={`tab ${timeView === 'monthly' ? 'active' : ''}`}
-                            onClick={() => setTimeView('monthly')}
-                        >
-                            Monthly
-                        </button>
-                    </div>
+                    {userRole === 'manager' && (
+                        <div className="view-tabs">
+                            <button
+                                className={`tab ${timeView === 'daily' ? 'active' : ''}`}
+                                onClick={() => setTimeView('daily')}
+                            >
+                                Daily
+                            </button>
+                            <button
+                                className={`tab ${timeView === 'weekly' ? 'active' : ''}`}
+                                onClick={() => setTimeView('weekly')}
+                            >
+                                Weekly
+                            </button>
+                            <button
+                                className={`tab ${timeView === 'monthly' ? 'active' : ''}`}
+                                onClick={() => setTimeView('monthly')}
+                            >
+                                Monthly
+                            </button>
+                        </div>
+                    )}
 
                     {userRole === 'manager' ? (
                         <>
@@ -2215,25 +2217,37 @@
         const CalendarView = ({ expenses }) => {
             const [currentMonth] = useState(new Date('2026-01-01'));
             const [selectedDay, setSelectedDay] = useState(null);
-            
+
             const getDaysInMonth = () => {
                 const year = currentMonth.getFullYear();
                 const month = currentMonth.getMonth();
                 const firstDay = new Date(year, month, 1);
                 const lastDay = new Date(year, month + 1, 0);
                 const days = [];
-                
+
+                console.log('📅 Calendar: Building calendar for', year, month + 1);
+                console.log('📅 Calendar: Total expenses to check:', expenses.length);
+                console.log('📅 Calendar: Expense dates:', expenses.map(e => ({ name: e.name, dueDate: e.dueDate })));
+
                 const firstDayOfWeek = firstDay.getDay();
                 for (let i = 0; i < firstDayOfWeek; i++) {
                     days.push(null);
                 }
-                
+
                 for (let i = 1; i <= lastDay.getDate(); i++) {
-                    const date = new Date(year, month, i);
-                    const dateStr = date.toISOString().split('T')[0];
-                    const dayExpenses = expenses.filter(e => e.dueDate === dateStr);
+                    // Use UTC to avoid timezone issues
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                    const dayExpenses = expenses.filter(e => {
+                        // Normalize both dates for comparison
+                        const expenseDate = e.dueDate.split('T')[0]; // Handle both '2026-01-01' and '2026-01-01T00:00:00'
+                        return expenseDate === dateStr;
+                    });
                     const total = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
-                    
+
+                    if (dayExpenses.length > 0) {
+                        console.log(`📅 Calendar: Day ${i} (${dateStr}) has ${dayExpenses.length} expenses:`, dayExpenses);
+                    }
+
                     days.push({
                         date: i,
                         fullDate: dateStr,
@@ -2241,7 +2255,8 @@
                         total
                     });
                 }
-                
+
+                console.log('📅 Calendar: Total days with expenses:', days.filter(d => d && d.expenses.length > 0).length);
                 return days;
             };
 
