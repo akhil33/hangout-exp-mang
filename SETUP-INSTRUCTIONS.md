@@ -34,13 +34,25 @@
 2. Click on "SQL Editor" in the left sidebar
 3. Click "New query"
 
-### Step 2: Run the Policy Fix Script
-Copy and paste the contents of `supabase-fix-policies.sql` into the SQL Editor and run it.
+### Step 2: Run the QUICK-FIX Script
 
-**OR** run this quick fix:
+Copy and paste the contents of **`QUICK-FIX.sql`** into the SQL Editor and run it.
+
+This will:
+1. **DISABLE RLS on user_roles** (stops the infinite recursion)
+2. **Fix expenses table policies** (allows authenticated users to add expenses)
+
+**The script is:**
 
 ```sql
--- Quick fix for expenses table
+-- Fix user_roles recursion
+DROP POLICY IF EXISTS "Users can view roles" ON user_roles;
+DROP POLICY IF EXISTS "Users can view their own role" ON user_roles;
+DROP POLICY IF EXISTS "Authenticated users can view all roles" ON user_roles;
+
+ALTER TABLE user_roles DISABLE ROW LEVEL SECURITY;
+
+-- Fix expenses table
 DROP POLICY IF EXISTS "Allow all for authenticated users" ON expenses;
 
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
@@ -50,16 +62,6 @@ ON expenses
 TO authenticated
 USING (true)
 WITH CHECK (true);
-
--- Quick fix for user_roles table
-DROP POLICY IF EXISTS "Authenticated users can view all roles" ON user_roles;
-
-ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Authenticated users can view all roles"
-ON user_roles FOR SELECT
-TO authenticated
-USING (true);
 ```
 
 ### Step 3: Verify It Works

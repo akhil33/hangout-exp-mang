@@ -1597,14 +1597,25 @@
 
             const fetchExpenses = async () => {
                 setIsLoadingExpenses(true);
+                console.log('🔍 Fetching expenses from Supabase...');
+
                 const { data, error } = await supabase
                     .from('expenses')
                     .select('*')
                     .order('due_date', { ascending: false });
 
                 if (error) {
-                    console.error('Error fetching expenses:', error);
+                    console.error('❌ Error fetching expenses:', error);
+                    console.error('Error details:', {
+                        message: error.message,
+                        details: error.details,
+                        hint: error.hint,
+                        code: error.code
+                    });
                 } else {
+                    console.log(`✅ Successfully fetched ${data?.length || 0} expenses from database`);
+                    console.log('Raw data from database:', data);
+
                     // Map database fields to app format (due_date -> dueDate)
                     const mappedExpenses = data.map(exp => ({
                         id: exp.id,
@@ -1615,6 +1626,8 @@
                         frequency: exp.frequency,
                         status: exp.status
                     }));
+
+                    console.log('📊 Mapped expenses:', mappedExpenses);
                     setExpenses(mappedExpenses);
                 }
                 setIsLoadingExpenses(false);

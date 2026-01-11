@@ -28,19 +28,24 @@ WITH CHECK (true);
 -- 2. FIX USER_ROLES TABLE POLICIES
 -- =============================================
 
--- Drop all existing policies on user_roles table
+-- Drop all existing policies on user_roles table to prevent recursion
 DROP POLICY IF EXISTS "Users can view roles" ON user_roles;
 DROP POLICY IF EXISTS "Users can view their own role" ON user_roles;
 DROP POLICY IF EXISTS "Authenticated users can view all roles" ON user_roles;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON user_roles;
+DROP POLICY IF EXISTS "Users can read user_roles table" ON user_roles;
 
--- Enable RLS on user_roles table
-ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+-- OPTION 1: Disable RLS entirely on user_roles (simplest, for development)
+ALTER TABLE user_roles DISABLE ROW LEVEL SECURITY;
 
--- Create a simple policy without recursion
-CREATE POLICY "Authenticated users can view all roles"
-ON user_roles FOR SELECT
-TO authenticated
-USING (true);
+-- OPTION 2: If you need RLS enabled, use this instead (comment out OPTION 1 above)
+-- ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+--
+-- -- Simple policy that doesn't cause recursion
+-- CREATE POLICY "user_roles_select_policy"
+-- ON user_roles FOR SELECT
+-- TO authenticated
+-- USING (true);
 
 -- =============================================
 -- 3. VERIFY TABLE STRUCTURE (Optional)
